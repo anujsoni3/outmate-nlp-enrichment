@@ -1,6 +1,7 @@
 import { config } from "@/lib/config";
 import type { ParsedPromptResult } from "@/lib/contracts";
 import { AppError } from "@/lib/errors";
+import { mockCompanyRecords, mockProspectRecords } from "@/lib/mock-data";
 
 type ExploriumFilter = {
   field: string;
@@ -92,7 +93,7 @@ export async function searchExplorium(parsed: ParsedPromptResult): Promise<Array
   }
 
   if (config.useMockExplorium) {
-    return [];
+    return parsed.entityType === "prospect" ? mockProspectRecords : mockCompanyRecords;
   }
 
   const response = await fetch(`${config.exploriumBaseUrl}${getEndpoint(parsed.entityType)}`, {
