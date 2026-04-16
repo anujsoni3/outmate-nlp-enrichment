@@ -13,6 +13,9 @@ type ApiSuccess = {
     entityType: "company" | "prospect";
     resultCount: number;
     requestId: string;
+    parsedFilters: Record<string, unknown>;
+    confidence: number;
+    dataSource: "live" | "mock";
   };
 };
 
@@ -40,7 +43,7 @@ export default function Home() {
   const subtitle = useMemo(
     () =>
       payload
-        ? `Last run: ${payload.meta.entityType} | ${payload.meta.resultCount} rows | request ${payload.meta.requestId}`
+        ? `Last run: ${payload.meta.entityType} | ${payload.meta.resultCount} rows | ${payload.meta.dataSource.toUpperCase()} data | request ${payload.meta.requestId}`
         : "Ready to enrich up to 3 records per search.",
     [payload],
   );
@@ -137,6 +140,18 @@ export default function Home() {
                 results={payload.results}
                 onViewJson={setSelectedRecord}
               />
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                  Gemini parsed filters (debug)
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Confidence: {payload.meta.confidence.toFixed(2)} | Source: {payload.meta.dataSource}
+                </p>
+                <pre className="mt-2 max-h-56 overflow-auto rounded-lg bg-slate-950 p-3 text-xs text-slate-100">
+                  {JSON.stringify(payload.meta.parsedFilters, null, 2)}
+                </pre>
+              </div>
             </div>
           ) : null}
         </section>

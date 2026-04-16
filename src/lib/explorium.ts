@@ -1,7 +1,6 @@
 import { config } from "@/lib/config";
 import type { ParsedPromptResult } from "@/lib/contracts";
 import { AppError } from "@/lib/errors";
-import { logger } from "@/lib/logger";
 import { mockCompanyRecords, mockProspectRecords } from "@/lib/mock-data";
 
 type ExploriumFilter = {
@@ -100,44 +99,24 @@ export async function searchExplorium(parsed: ParsedPromptResult): Promise<Array
   if (config.useMockExplorium) {
     return getMockRecords(parsed.entityType);
   }
+  const response = await fetch(`${config.exploriumBaseUrl}${getEndpoint(parsed.entityType)}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${config.exploriumApiKey}`,
+    },
+    body: JSON.stringify(buildExploriumPayload(parsed)),
+  });
 
-  try {
-    const response = await fetch(`${config.exploriumBaseUrl}${getEndpoint(parsed.entityType)}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${config.exploriumApiKey}`,
-      },
-      body: JSON.stringify(buildExploriumPayload(parsed)),
-    });
-
-    if (!response.ok) {
-      if (config.nodeEnv !== "production") {
-        logger.warn("Explorium request failed. Using local mock fallback in development.", {
-          status: response.status,
-          entityType: parsed.entityType,
-        });
-        return getMockRecords(parsed.entityType);
-      }
-
-      throw new AppError(
-        "EXPLORIUM_API_ERROR",
-        `Explorium request failed with status ${response.status}.`,
-      );
-    }
-
-    const payload = (await response.json()) as ExploriumSearchResponse;
-    const records = payload.results ?? payload.data ?? [];
-
-    return Array.isArray(records) ? records : [];
-  } catch (error) {
-    if (config.nodeEnv !== "production") {
-      logger.warn("Explorium network error. Using local mock fallback in development.", {
-        entityType: parsed.entityType,
-      });
-      return getMockRecords(parsed.entityType);
-    }
-
-    throw error;
+  if (!response.ok) {
+    throw new AppError(
+      "EXPLORIUM_API_ERROR",
+      `Explorium request failed with status ${response.status}.`,
+    );
   }
+
+  const payload = (await response.json()) as ExploriumSearchResponse;
+  const records = payload.results ?? payload.data ?? [];
+
+  return Array.isArray(records) ? records : [];
 }

@@ -1,7 +1,6 @@
 import { AppError } from "@/lib/errors";
 import type { EnrichmentFilters, ParsedPromptResult } from "@/lib/contracts";
 import { config } from "@/lib/config";
-import { logger } from "@/lib/logger";
 
 const GEMINI_MODEL = "gemini-2.0-flash";
 
@@ -117,80 +116,6 @@ function parseGeminiOutput(rawText: string): ParsedPromptResult {
   };
 }
 
-function parsePromptFallback(prompt: string): ParsedPromptResult {
-  const text = prompt.toLowerCase();
-  const entityType = /(vp|head|director|manager|contact|prospect|leader)/.test(text)
-    ? "prospect"
-    : "company";
-
-  const filters: EnrichmentFilters = {};
-
-  const industryMap = [
-    "saas",
-    "software",
-    "fintech",
-    "cybersecurity",
-    "e-commerce",
-    "ecommerce",
-    "ai",
-    "infrastructure",
-  ];
-  const industries = industryMap
-    .filter((industry) => text.includes(industry))
-    .map((industry) => (industry === "ecommerce" ? "e-commerce" : industry));
-  if (industries.length > 0) {
-    filters.industries = [...new Set(industries)];
-  }
-
-  const countryMap: Record<string, string> = {
-    "united states": "United States",
-    us: "United States",
-    usa: "United States",
-    india: "India",
-    germany: "Germany",
-    canada: "Canada",
-    europe: "Europe",
-    "north america": "North America",
-    uk: "United Kingdom",
-    "united kingdom": "United Kingdom",
-  };
-  const countries = Object.entries(countryMap)
-    .filter(([key]) => text.includes(key))
-    .map(([, value]) => value);
-  if (countries.length > 0) {
-    filters.countries = [...new Set(countries)];
-  }
-
-  const rangeMatch = text.match(/(\d{1,6})\s*[-–]\s*(\d{1,6})\s*employees?/);
-  if (rangeMatch) {
-    filters.employeeCountMin = Number(rangeMatch[1]);
-    filters.employeeCountMax = Number(rangeMatch[2]);
-  }
-
-  const greaterMatch = text.match(/(?:more than|at least|>=?)\s*\$?(\d+(?:\.\d+)?)\s*m/);
-  if (greaterMatch) {
-    filters.revenueMinUsd = Number(greaterMatch[1]) * 1_000_000;
-  }
-
-  const titleMap = [
-    "vp sales",
-    "head of sales",
-    "head of marketing",
-    "marketing leader",
-    "director",
-  ];
-  const jobTitles = titleMap.filter((title) => text.includes(title));
-  if (jobTitles.length > 0) {
-    filters.jobTitles = [...new Set(jobTitles.map((title) => title.replace(/\b\w/g, (m) => m.toUpperCase())))];
-  }
-
-  return {
-    entityType,
-    filters,
-    confidence: 0.62,
-  };
-}
-
 async function callGemini(prompt: string): Promise<string> {
   if (!config.geminiApiKey) {
     throw new AppError("GEMINI_API_ERROR", "Gemini API key is missing.");
@@ -230,22 +155,8 @@ async function callGemini(prompt: string): Promise<string> {
 }
 
 export async function parsePromptWithGemini(prompt: string): Promise<ParsedPromptResult> {
-  try {
-    const raw = await callGemini(prompt);
-    return parseGeminiOutput(raw);
-  } catch (error) {
-    if (
-      config.nodeEnv !== "production" &&
-      error instanceof AppError &&
-      error.code === "GEMINI_API_ERROR" &&
-      error.message.includes("status 429")
-    ) {
-      logger.warn("Gemini rate-limited. Using local prompt fallback in development.");
-      return parsePromptFallback(prompt);
-    }
-
-    throw error;
-  }
+  const raw = await callGemini(prompt);
+  return parseGeminiOutput(raw);
 }
 
 export const __private__ = {

@@ -47,6 +47,10 @@ Production template: `.env.production.example`
 - `ALLOWED_ORIGIN`: frontend origin allowed by CORS in production.
 - `USE_MOCK_EXPLORIUM`: `true` or `false`.
 
+Important:
+- Set `USE_MOCK_EXPLORIUM=false` for assignment submission and live Explorium validation.
+- The API now fails explicitly when Gemini or Explorium calls fail (no implicit fallback in live mode).
+
 ## API contract
 
 ### POST /api/enrich

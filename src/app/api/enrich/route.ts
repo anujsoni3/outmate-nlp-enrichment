@@ -6,6 +6,7 @@ import { AppError, toErrorResponse } from "@/lib/errors";
 import { searchExplorium } from "@/lib/explorium";
 import { normalizeExploriumRecords } from "@/lib/normalize";
 import { logger } from "@/lib/logger";
+import { config } from "@/lib/config";
 
 export async function POST(request: Request) {
   const requestId = createRequestId();
@@ -38,6 +39,9 @@ export async function POST(request: Request) {
         entityType: parsed.entityType,
         resultCount: normalized.length,
         requestId,
+        parsedFilters: parsed.filters,
+        confidence: parsed.confidence,
+        dataSource: config.useMockExplorium ? "mock" : "live",
       },
     });
   } catch (error) {
