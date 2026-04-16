@@ -1,11 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { EnrichedRecord } from "@/lib/contracts";
 import { PromptForm } from "@/components/prompt-form";
 import { SamplePrompts } from "@/components/sample-prompts";
+import { ResultsTable } from "@/components/results-table";
+import { JsonModal } from "@/components/json-modal";
 
 type ApiSuccess = {
-  results: unknown[];
+  results: EnrichedRecord[];
   meta: {
     entityType: "company" | "prospect";
     resultCount: number;
@@ -32,6 +35,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [payload, setPayload] = useState<ApiSuccess | null>(null);
+  const [selectedRecord, setSelectedRecord] = useState<EnrichedRecord | null>(null);
 
   const subtitle = useMemo(
     () =>
@@ -61,10 +65,12 @@ export default function Home() {
 
       const body = (await response.json()) as ApiSuccess;
       setPayload(body);
+      setSelectedRecord(null);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unexpected error.";
       setError(message);
       setPayload(null);
+      setSelectedRecord(null);
     } finally {
       setLoading(false);
     }
@@ -110,7 +116,38 @@ export default function Home() {
               No results yet. Run a prompt to fetch enriched records.
             </p>
           ) : null}
+
+          {payload ? (
+            <div className="mt-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-slate-700">Enriched results</p>
+                <button
+                  type="button"
+                  className="rounded-md border border-slate-300 px-2.5 py-1.5 text-xs text-slate-700 transition hover:bg-slate-100"
+                  onClick={() => {
+                    setPayload(null);
+                    setSelectedRecord(null);
+                  }}
+                >
+                  Clear results
+                </button>
+              </div>
+              <ResultsTable
+                entityType={payload.meta.entityType}
+                results={payload.results}
+                onViewJson={setSelectedRecord}
+              />
+            </div>
+          ) : null}
         </section>
+
+        {selectedRecord ? (
+          <JsonModal
+            title={`${selectedRecord.name} - Raw JSON`}
+            data={selectedRecord.raw ?? selectedRecord}
+            onClose={() => setSelectedRecord(null)}
+          />
+        ) : null}
       </main>
     </div>
   );
