@@ -37,6 +37,8 @@ npm run dev
 
 App URL: http://localhost:3000
 
+Production template: `.env.production.example`
+
 ## Environment variables
 
 - `GEMINI_API_KEY`: Gemini API key.
@@ -120,3 +122,4 @@ Response:
 - `npm run lint`
 - `npm run typecheck`
 - `npm test`
+- `npm run check`
