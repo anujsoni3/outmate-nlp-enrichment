@@ -2,6 +2,7 @@ type AppConfig = {
   nodeEnv: "development" | "production" | "test";
   geminiApiKey: string;
   exploriumApiKey: string;
+  exploriumBaseUrl: string;
   allowedOrigin: string;
   useMockExplorium: boolean;
 };
@@ -34,6 +35,8 @@ export function getConfig(): AppConfig {
     ? required("EXPLORIUM_API_KEY", process.env.EXPLORIUM_API_KEY)
     : process.env.EXPLORIUM_API_KEY ?? "";
 
+  const exploriumBaseUrl = process.env.EXPLORIUM_BASE_URL ?? "https://api.explorium.ai";
+
   const allowedOrigin = isProduction
     ? required("ALLOWED_ORIGIN", process.env.ALLOWED_ORIGIN)
     : process.env.ALLOWED_ORIGIN ?? "http://localhost:3000";
@@ -42,6 +45,7 @@ export function getConfig(): AppConfig {
     nodeEnv,
     geminiApiKey,
     exploriumApiKey,
+    exploriumBaseUrl,
     allowedOrigin,
     useMockExplorium: parseBoolean(process.env.USE_MOCK_EXPLORIUM, true),
   };
