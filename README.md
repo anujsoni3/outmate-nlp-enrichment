@@ -1,126 +1,86 @@
-# OutMate - NLP Enrichment Demo
+# OutMate Enrichment Studio
 
-Mini production-style implementation of the Outmate NLP Database Enrichment assignment.
+A local-first Next.js app that turns a natural-language prompt into enriched B2B company or prospect data.
 
-## Project overview
+## What it does
 
-The app accepts a natural language prompt and performs this pipeline:
+The app:
 
-1. Parse prompt with Gemini into structured B2B filters and company names.
-2. Match company names using Explorium `businesses_to_match`.
-3. Call Explorium bulk enrich using the matched IDs.
-4. Enforce a strict maximum of 3 records.
-5. Render results in a clean table with per-row raw JSON inspection.
+1. Uses Gemini to interpret the prompt.
+2. Resolves candidate company names through Explorium matching.
+3. Enriches matched business IDs through Explorium bulk enrichment.
+4. Shows the top results in a table with a raw JSON viewer.
 
-## Architecture
+If external APIs are unavailable, the app supports mock mode for local development.
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for a system diagram and flow details.
+## Stack
 
-## Tech stack
-
-- Next.js (App Router) fullstack
+- Next.js App Router
 - TypeScript
 - Tailwind CSS v4
-- Gemini via Generative Language API
-- Explorium REST API
-- Jest for test coverage
+- Gemini API
+- Explorium API
+- Jest
 
-## Local run
+## Local setup
 
-1. Copy `.env.local.example` to `.env.local`.
-2. Fill keys for live mode, or keep `USE_MOCK_EXPLORIUM=true` for local mock mode.
-3. Run:
+1. Copy [.env.example](.env.example) to [.env](.env).
+2. Fill in the values you want to use.
+3. Install and start the app:
 
 ```bash
 npm install
 npm run dev
 ```
 
-App URL: http://localhost:3000
-
-Production template: `.env.production.example`
+Open http://localhost:3000.
 
 ## Environment variables
 
 - `GEMINI_API_KEY`: Gemini API key.
 - `EXPLORIUM_API_KEY`: Explorium API key.
 - `EXPLORIUM_BASE_URL`: Explorium API base URL.
-- `EXPLORIUM_MATCH_PATH`: matching endpoint path used before bulk enrich.
+- `EXPLORIUM_MATCH_PATH`: match endpoint path.
 - `EXPLORIUM_BULK_ENRICH_PATH`: bulk enrich endpoint path.
-- `ALLOWED_ORIGIN`: frontend origin allowed by CORS in production.
-- `USE_MOCK_EXPLORIUM`: `true` or `false`.
+- `ALLOWED_ORIGIN`: frontend origin allowed in production.
+- `USE_MOCK_EXPLORIUM`: set to `true` for local mock mode.
+- `NODE_ENV`: normally `development` locally and `production` in deploys.
 
-Important:
-- Set `USE_MOCK_EXPLORIUM=false` for assignment submission and live Explorium validation.
-- The API now fails explicitly when Gemini or Explorium calls fail (no implicit fallback in live mode).
-- Explorium match request body uses `request_context: null` and `businesses_to_match: [{ name }]`.
+## API
 
-## API contract
+### `POST /api/enrich`
 
-### POST /api/enrich
-
-Request body:
+Body:
 
 ```json
 {
-	"prompt": "Find 3 fast-growing SaaS companies in the US with 50-500 employees"
+  "prompt": "Find 3 fast-growing SaaS companies in the US with 50-500 employees"
 }
 ```
-
-Success response:
-
-```json
-{
-	"results": [
-		{
-			"id": "cmp-1001",
-			"type": "company",
-			"name": "Northstar AI Systems",
-			"domain": "northstar.ai",
-			"industry": "Artificial Intelligence",
-			"employeeCount": 180,
-			"revenue": "$55M",
-			"country": "United States",
-			"website": "https://northstar.ai",
-			"linkedinUrl": "https://www.linkedin.com/company/northstar-ai",
-			"raw": {}
-		}
-	],
-	"meta": {
-		"entityType": "company",
-		"resultCount": 1,
-		"requestId": "..."
-	}
-}
-```
-
-Error response:
-
-```json
-{
-	"message": "Prompt must be at least 3 characters long.",
-	"errorCode": "INVALID_PROMPT",
-	"requestId": "..."
-}
-```
-
-### GET /api/health
 
 Response:
 
 ```json
 {
-	"status": "ok"
+  "results": [],
+  "meta": {
+    "entityType": "company",
+    "resultCount": 0,
+    "requestId": "...",
+    "parsedFilters": {},
+    "confidence": 0,
+    "dataSource": "live"
+  }
 }
 ```
 
-## Sample prompts
+### `GET /api/health`
 
-1. Find 3 fast-growing SaaS companies in the US with 50-500 employees, raising Series B or later.
-2. Give me 3 VPs of Sales in European fintech startups with more than 100 employees.
-3. Top AI infrastructure companies hiring machine learning engineers in India.
-4. 3 marketing leaders at e-commerce brands in North America doing more than $50M in revenue.
-5. Cybersecurity firms with increasing web traffic and at least 200 employees.
+Returns:
+
+```json
+{ "status": "ok" }
+```
 
 ## Scripts
 
@@ -131,3 +91,8 @@ Response:
 - `npm run typecheck`
 - `npm test`
 - `npm run check`
+
+## Notes
+
+- The app shows the parsed Gemini filters in the UI for debugging.
+- The repo is meant for local use and can be configured for live APIs later.
