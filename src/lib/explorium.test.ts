@@ -7,17 +7,14 @@ describe("Explorium request builders", () => {
       confidence: 0.9,
       filters: {
         companyNames: ["OpenAI", "Anthropic"],
-        industries: ["SaaS"],
-        countries: ["United States"],
-        employeeCountMin: 50,
-        employeeCountMax: 200,
       },
     });
 
-    expect(payload.page_size).toBe(3);
-    expect(payload.company_names).toEqual(["OpenAI", "Anthropic"]);
-    expect(payload.industries).toEqual(["SaaS"]);
-    expect(payload.countries).toEqual(["United States"]);
+    expect(payload.request_context).toBeNull();
+    expect(payload.businesses_to_match).toEqual([
+      { name: "OpenAI" },
+      { name: "Anthropic" },
+    ]);
   });
 
   it("caps bulk enrich IDs at 3", () => {

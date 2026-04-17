@@ -7,7 +7,7 @@ Mini production-style implementation of the Outmate NLP Database Enrichment assi
 The app accepts a natural language prompt and performs this pipeline:
 
 1. Parse prompt with Gemini into structured B2B filters and company names.
-2. Match company names to business IDs.
+2. Match company names using Explorium `businesses_to_match`.
 3. Call Explorium bulk enrich using the matched IDs.
 4. Enforce a strict maximum of 3 records.
 5. Render results in a clean table with per-row raw JSON inspection.
@@ -53,6 +53,7 @@ Production template: `.env.production.example`
 Important:
 - Set `USE_MOCK_EXPLORIUM=false` for assignment submission and live Explorium validation.
 - The API now fails explicitly when Gemini or Explorium calls fail (no implicit fallback in live mode).
+- Explorium match request body uses `request_context: null` and `businesses_to_match: [{ name }]`.
 
 ## API contract
 

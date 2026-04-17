@@ -6,7 +6,7 @@ User Browser
 -> Next.js Frontend (Prompt + Table + JSON Viewer)
 -> POST /api/enrich
 -> Gemini filter extraction
--> Explorium business-name match
+-> Explorium business-name match via `businesses_to_match`
 -> Explorium bulk enrich by business_ids
 -> Normalization + hard cap (3)
 -> Frontend table rendering
@@ -19,7 +19,7 @@ User Browser
 4. Resolve business_ids using Explorium match endpoint.
 5. Bulk enrich business_ids with page_size = 3.
 6. Normalize records and enforce final safety cap with slice(0, 3).
-6. Return stable response schema with meta and requestId.
+7. Return stable response schema with meta and requestId.
 
 ## Security baseline
 

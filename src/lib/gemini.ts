@@ -11,7 +11,7 @@ const SYSTEM_PROMPT = [
   "Rules:",
   "1) Output JSON only. No markdown.",
   "2) Infer entity_type from prompt intent: person/contact/title -> prospect, otherwise company.",
-  "3) Extract company names when the prompt mentions named companies or brands.",
+  "3) Always populate company_names for company prompts: use named companies if present, otherwise infer a short list of plausible target companies that fit the intent.",
   "4) Include only fields inferred from prompt. Omit empty filters.",
   "5) confidence must be between 0 and 1.",
   "6) Normalize countries to full names when clear.",

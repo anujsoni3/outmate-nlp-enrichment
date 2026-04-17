@@ -10,11 +10,8 @@ type ExploriumApiResponse = {
 };
 
 type MatchRequestBody = {
-  company_names?: string[];
-  keywords?: string[];
-  countries?: string[];
-  industries?: string[];
-  page_size?: number;
+  request_context: null;
+  businesses_to_match: Array<{ name: string }>;
 };
 
 type BulkEnrichRequestBody = {
@@ -42,12 +39,11 @@ function getBulkEnrichPath(entityType: ParsedPromptResult["entityType"]): string
 }
 
 export function buildMatchRequestBody(parsed: ParsedPromptResult): MatchRequestBody {
+  const companyNames = asStringArray(parsed.filters.companyNames);
+
   return {
-    company_names: asStringArray(parsed.filters.companyNames),
-    keywords: asStringArray(parsed.filters.keywords),
-    countries: asStringArray(parsed.filters.countries),
-    industries: asStringArray(parsed.filters.industries),
-    page_size: 3,
+    request_context: null,
+    businesses_to_match: (companyNames ?? []).slice(0, 3).map((name) => ({ name })),
   };
 }
 
@@ -57,6 +53,13 @@ async function matchBusinessIds(parsed: ParsedPromptResult): Promise<string[]> {
     throw new AppError(
       "EXPLORIUM_API_ERROR",
       "Gemini must extract company names for Explorium matching.",
+    );
+  }
+
+  if (companyNames.length === 0) {
+    throw new AppError(
+      "EXPLORIUM_API_ERROR",
+      "No company names were extracted for Explorium matching.",
     );
   }
 
