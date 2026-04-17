@@ -3,21 +3,23 @@ import type { ParsedPromptResult } from "@/lib/contracts";
 import { AppError } from "@/lib/errors";
 import { mockCompanyRecords, mockProspectRecords } from "@/lib/mock-data";
 
-type ExploriumFilter = {
-  field: string;
-  values?: string[];
-  min?: number;
-  max?: number;
-};
-
-type ExploriumPayload = {
-  page_size: number;
-  filters: ExploriumFilter[];
-};
-
-type ExploriumSearchResponse = {
+type ExploriumApiResponse = {
   results?: Array<Record<string, unknown>>;
   data?: Array<Record<string, unknown>>;
+  business_ids?: string[];
+};
+
+type MatchRequestBody = {
+  company_names?: string[];
+  keywords?: string[];
+  countries?: string[];
+  industries?: string[];
+  page_size?: number;
+};
+
+type BulkEnrichRequestBody = {
+  business_ids: string[];
+  page_size: number;
 };
 
 function asStringArray(values?: string[]): string[] | undefined {
@@ -29,66 +31,90 @@ function asStringArray(values?: string[]): string[] | undefined {
   return normalized.length > 0 ? normalized : undefined;
 }
 
-export function buildExploriumPayload(parsed: ParsedPromptResult): ExploriumPayload {
-  const filters: ExploriumFilter[] = [];
+function getMockRecords(entityType: ParsedPromptResult["entityType"]): Array<Record<string, unknown>> {
+  return entityType === "prospect" ? mockProspectRecords : mockCompanyRecords;
+}
 
-  const industries = asStringArray(parsed.filters.industries);
-  if (industries) {
-    filters.push({ field: "industry", values: industries });
-  }
+function getBulkEnrichPath(entityType: ParsedPromptResult["entityType"]): string {
+  return entityType === "prospect"
+    ? "/v1/businesses/people/bulk_enrich"
+    : config.exploriumBulkEnrichPath;
+}
 
-  const countries = asStringArray(parsed.filters.countries);
-  if (countries) {
-    filters.push({ field: "country", values: countries });
-  }
-
-  const keywords = asStringArray(parsed.filters.keywords);
-  if (keywords) {
-    filters.push({ field: "keywords", values: keywords });
-  }
-
-  const employeeCountMin = parsed.filters.employeeCountMin;
-  const employeeCountMax = parsed.filters.employeeCountMax;
-  if (employeeCountMin !== undefined || employeeCountMax !== undefined) {
-    filters.push({
-      field: "employee_count",
-      min: employeeCountMin,
-      max: employeeCountMax,
-    });
-  }
-
-  const revenueMinUsd = parsed.filters.revenueMinUsd;
-  const revenueMaxUsd = parsed.filters.revenueMaxUsd;
-  if (revenueMinUsd !== undefined || revenueMaxUsd !== undefined) {
-    filters.push({
-      field: "revenue_usd",
-      min: revenueMinUsd,
-      max: revenueMaxUsd,
-    });
-  }
-
-  const jobTitles = asStringArray(parsed.filters.jobTitles);
-  if (jobTitles) {
-    filters.push({ field: "job_title", values: jobTitles });
-  }
-
-  const departments = asStringArray(parsed.filters.departments);
-  if (departments) {
-    filters.push({ field: "department", values: departments });
-  }
-
+export function buildMatchRequestBody(parsed: ParsedPromptResult): MatchRequestBody {
   return {
+    company_names: asStringArray(parsed.filters.companyNames),
+    keywords: asStringArray(parsed.filters.keywords),
+    countries: asStringArray(parsed.filters.countries),
+    industries: asStringArray(parsed.filters.industries),
     page_size: 3,
-    filters,
   };
 }
 
-function getEndpoint(entityType: ParsedPromptResult["entityType"]): string {
-  return entityType === "prospect" ? "/v1/prospects/search" : "/v1/companies/search";
+async function matchBusinessIds(parsed: ParsedPromptResult): Promise<string[]> {
+  const companyNames = asStringArray(parsed.filters.companyNames);
+  if (!companyNames || companyNames.length === 0) {
+    throw new AppError(
+      "EXPLORIUM_API_ERROR",
+      "Gemini must extract company names for Explorium matching.",
+    );
+  }
+
+  const response = await fetch(`${config.exploriumBaseUrl}${config.exploriumMatchPath}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${config.exploriumApiKey}`,
+    },
+    body: JSON.stringify(buildMatchRequestBody(parsed)),
+  });
+
+  if (!response.ok) {
+    throw new AppError(
+      "EXPLORIUM_API_ERROR",
+      `Explorium match request failed with status ${response.status}.`,
+    );
+  }
+
+  const payload = (await response.json()) as ExploriumApiResponse;
+  const idsFromRoot = payload.business_ids ?? [];
+  const idsFromResults = (payload.results ?? payload.data ?? [])
+    .map((item) => String(item.business_id ?? item.id ?? ""))
+    .filter((value) => value.length > 0);
+
+  return [...new Set([...idsFromRoot, ...idsFromResults])].slice(0, 3);
 }
 
-function getMockRecords(entityType: ParsedPromptResult["entityType"]): Array<Record<string, unknown>> {
-  return entityType === "prospect" ? mockProspectRecords : mockCompanyRecords;
+export function buildBulkEnrichRequestBody(businessIds: string[]): BulkEnrichRequestBody {
+  return {
+    business_ids: businessIds.slice(0, 3),
+    page_size: 3,
+  };
+}
+
+async function bulkEnrichBusinessIds(
+  entityType: ParsedPromptResult["entityType"],
+  businessIds: string[],
+): Promise<Array<Record<string, unknown>>> {
+  const response = await fetch(`${config.exploriumBaseUrl}${getBulkEnrichPath(entityType)}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${config.exploriumApiKey}`,
+    },
+    body: JSON.stringify(buildBulkEnrichRequestBody(businessIds)),
+  });
+
+  if (!response.ok) {
+    throw new AppError(
+      "EXPLORIUM_API_ERROR",
+      `Explorium enrich request failed with status ${response.status}.`,
+    );
+  }
+
+  const payload = (await response.json()) as ExploriumApiResponse;
+  const records = payload.results ?? payload.data ?? [];
+  return Array.isArray(records) ? records.slice(0, 3) : [];
 }
 
 export async function searchExplorium(parsed: ParsedPromptResult): Promise<Array<Record<string, unknown>>> {
@@ -99,24 +125,11 @@ export async function searchExplorium(parsed: ParsedPromptResult): Promise<Array
   if (config.useMockExplorium) {
     return getMockRecords(parsed.entityType);
   }
-  const response = await fetch(`${config.exploriumBaseUrl}${getEndpoint(parsed.entityType)}`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${config.exploriumApiKey}`,
-    },
-    body: JSON.stringify(buildExploriumPayload(parsed)),
-  });
 
-  if (!response.ok) {
-    throw new AppError(
-      "EXPLORIUM_API_ERROR",
-      `Explorium request failed with status ${response.status}.`,
-    );
+  const businessIds = await matchBusinessIds(parsed);
+  if (businessIds.length === 0) {
+    return [];
   }
 
-  const payload = (await response.json()) as ExploriumSearchResponse;
-  const records = payload.results ?? payload.data ?? [];
-
-  return Array.isArray(records) ? records : [];
+  return bulkEnrichBusinessIds(parsed.entityType, businessIds);
 }

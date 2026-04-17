@@ -6,10 +6,11 @@ Mini production-style implementation of the Outmate NLP Database Enrichment assi
 
 The app accepts a natural language prompt and performs this pipeline:
 
-1. Parse prompt with Gemini into structured B2B filters.
-2. Query Explorium for company or prospect enrichment.
-3. Enforce a strict maximum of 3 records.
-4. Render results in a clean table with per-row raw JSON inspection.
+1. Parse prompt with Gemini into structured B2B filters and company names.
+2. Match company names to business IDs.
+3. Call Explorium bulk enrich using the matched IDs.
+4. Enforce a strict maximum of 3 records.
+5. Render results in a clean table with per-row raw JSON inspection.
 
 ## Architecture
 
@@ -44,6 +45,8 @@ Production template: `.env.production.example`
 - `GEMINI_API_KEY`: Gemini API key.
 - `EXPLORIUM_API_KEY`: Explorium API key.
 - `EXPLORIUM_BASE_URL`: Explorium API base URL.
+- `EXPLORIUM_MATCH_PATH`: matching endpoint path used before bulk enrich.
+- `EXPLORIUM_BULK_ENRICH_PATH`: bulk enrich endpoint path.
 - `ALLOWED_ORIGIN`: frontend origin allowed by CORS in production.
 - `USE_MOCK_EXPLORIUM`: `true` or `false`.
 

@@ -1,11 +1,12 @@
-import { buildExploriumPayload } from "./explorium";
+import { buildBulkEnrichRequestBody, buildMatchRequestBody } from "./explorium";
 
-describe("buildExploriumPayload", () => {
-  it("maps company filters to payload format", () => {
-    const payload = buildExploriumPayload({
+describe("Explorium request builders", () => {
+  it("maps company filters to match payload format", () => {
+    const payload = buildMatchRequestBody({
       entityType: "company",
       confidence: 0.9,
       filters: {
+        companyNames: ["OpenAI", "Anthropic"],
         industries: ["SaaS"],
         countries: ["United States"],
         employeeCountMin: 50,
@@ -14,21 +15,15 @@ describe("buildExploriumPayload", () => {
     });
 
     expect(payload.page_size).toBe(3);
-    expect(payload.filters.some((f) => f.field === "industry")).toBe(true);
-    expect(payload.filters.some((f) => f.field === "employee_count")).toBe(true);
+    expect(payload.company_names).toEqual(["OpenAI", "Anthropic"]);
+    expect(payload.industries).toEqual(["SaaS"]);
+    expect(payload.countries).toEqual(["United States"]);
   });
 
-  it("maps prospect titles and departments", () => {
-    const payload = buildExploriumPayload({
-      entityType: "prospect",
-      confidence: 0.88,
-      filters: {
-        jobTitles: ["VP Sales"],
-        departments: ["Sales"],
-      },
-    });
+  it("caps bulk enrich IDs at 3", () => {
+    const payload = buildBulkEnrichRequestBody(["id-1", "id-2", "id-3", "id-4"]);
 
-    expect(payload.filters.some((f) => f.field === "job_title")).toBe(true);
-    expect(payload.filters.some((f) => f.field === "department")).toBe(true);
+    expect(payload.page_size).toBe(3);
+    expect(payload.business_ids).toEqual(["id-1", "id-2", "id-3"]);
   });
 });

@@ -1,6 +1,7 @@
 export type EntityType = "company" | "prospect";
 
 export type EnrichmentFilters = {
+  companyNames?: string[];
   industries?: string[];
   countries?: string[];
   keywords?: string[];

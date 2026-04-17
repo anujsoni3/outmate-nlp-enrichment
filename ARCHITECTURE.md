@@ -6,7 +6,8 @@ User Browser
 -> Next.js Frontend (Prompt + Table + JSON Viewer)
 -> POST /api/enrich
 -> Gemini filter extraction
--> Explorium search/enrichment
+-> Explorium business-name match
+-> Explorium bulk enrich by business_ids
 -> Normalization + hard cap (3)
 -> Frontend table rendering
 
@@ -14,9 +15,10 @@ User Browser
 
 1. Validate request body and prompt length.
 2. Parse prompt with Gemini into structured filters.
-3. Select company/prospect endpoint for Explorium.
-4. Request page_size = 3 and normalize records.
-5. Enforce final safety cap with slice(0, 3).
+3. Extract company names for business matching.
+4. Resolve business_ids using Explorium match endpoint.
+5. Bulk enrich business_ids with page_size = 3.
+6. Normalize records and enforce final safety cap with slice(0, 3).
 6. Return stable response schema with meta and requestId.
 
 ## Security baseline

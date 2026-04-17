@@ -3,6 +3,8 @@ type AppConfig = {
   geminiApiKey: string;
   exploriumApiKey: string;
   exploriumBaseUrl: string;
+  exploriumMatchPath: string;
+  exploriumBulkEnrichPath: string;
   allowedOrigin: string;
   useMockExplorium: boolean;
 };
@@ -36,6 +38,9 @@ export function getConfig(): AppConfig {
     : process.env.EXPLORIUM_API_KEY ?? "";
 
   const exploriumBaseUrl = process.env.EXPLORIUM_BASE_URL ?? "https://api.explorium.ai";
+  const exploriumMatchPath = process.env.EXPLORIUM_MATCH_PATH ?? "/v1/businesses/match";
+  const exploriumBulkEnrichPath =
+    process.env.EXPLORIUM_BULK_ENRICH_PATH ?? "/v1/businesses/firmographics/bulk_enrich";
 
   const allowedOrigin = isProduction
     ? required("ALLOWED_ORIGIN", process.env.ALLOWED_ORIGIN)
@@ -46,6 +51,8 @@ export function getConfig(): AppConfig {
     geminiApiKey,
     exploriumApiKey,
     exploriumBaseUrl,
+    exploriumMatchPath,
+    exploriumBulkEnrichPath,
     allowedOrigin,
     useMockExplorium: parseBoolean(process.env.USE_MOCK_EXPLORIUM, true),
   };

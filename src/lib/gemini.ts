@@ -7,14 +7,15 @@ const GEMINI_MODEL = "gemini-2.0-flash";
 const SYSTEM_PROMPT = [
   "You convert sales and marketing prompts to structured B2B filters.",
   "Return JSON only with this exact shape:",
-  '{"entity_type":"company|prospect","filters":{"industries":string[],"countries":string[],"keywords":string[],"employee_count_min":number,"employee_count_max":number,"revenue_min_usd":number,"revenue_max_usd":number,"job_titles":string[],"departments":string[]},"confidence":number}',
+  '{"entity_type":"company|prospect","filters":{"company_names":string[],"industries":string[],"countries":string[],"keywords":string[],"employee_count_min":number,"employee_count_max":number,"revenue_min_usd":number,"revenue_max_usd":number,"job_titles":string[],"departments":string[]},"confidence":number}',
   "Rules:",
   "1) Output JSON only. No markdown.",
   "2) Infer entity_type from prompt intent: person/contact/title -> prospect, otherwise company.",
-  "3) Include only fields inferred from prompt. Omit empty filters.",
-  "4) confidence must be between 0 and 1.",
-  "5) Normalize countries to full names when clear.",
-  "6) For ambiguous prompts, still return best effort filters with lower confidence.",
+  "3) Extract company names when the prompt mentions named companies or brands.",
+  "4) Include only fields inferred from prompt. Omit empty filters.",
+  "5) confidence must be between 0 and 1.",
+  "6) Normalize countries to full names when clear.",
+  "7) For ambiguous prompts, still return best effort filters with lower confidence.",
 ].join("\n");
 
 type GeminiResponse = {
@@ -30,6 +31,7 @@ type GeminiResponse = {
 type GeminiParsedShape = {
   entity_type?: string;
   filters?: {
+    company_names?: unknown;
     industries?: unknown;
     countries?: unknown;
     keywords?: unknown;
@@ -69,6 +71,7 @@ function parseNumber(value: unknown): number | undefined {
 
 function parseFilters(input?: GeminiParsedShape["filters"]): EnrichmentFilters {
   return {
+    companyNames: parseStringArray(input?.company_names),
     industries: parseStringArray(input?.industries),
     countries: parseStringArray(input?.countries),
     keywords: parseStringArray(input?.keywords),
